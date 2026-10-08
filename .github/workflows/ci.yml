@@ -34,3 +34,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  database:
+    name: Database migrations and RLS tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Starts a real local Supabase (Postgres + Auth) in Docker and applies every
+      # migration from scratch, proving the schema can be recreated from the repo.
+      # Services the tests don't need are skipped to keep the job fast.
+      - run: npx supabase start -x realtime,storage-api,imgproxy,mailpit,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+      # Runs supabase/tests/*.sql with pgTAP: proves user A can't read or change user B's data.
+      - run: npm run db:test
