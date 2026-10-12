@@ -7,7 +7,14 @@ import { startDemo } from "./helpers";
 test.describe("phone layout", () => {
   test.use({ viewport: { width: 360, height: 740 } });
 
-  for (const path of ["/", "/dashboard", "/applications", "/applications/new", "/board"]) {
+  for (const path of [
+    "/",
+    "/login",
+    "/dashboard",
+    "/applications",
+    "/applications/new",
+    "/board",
+  ]) {
     test(`${path} fits the screen width`, async ({ page }) => {
       await startDemo(page);
       await page.goto(path);

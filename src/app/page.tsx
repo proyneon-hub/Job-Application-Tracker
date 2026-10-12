@@ -1,6 +1,7 @@
 import { BarChart3, BellRing, KanbanSquare, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 const FEATURES = [
@@ -33,8 +34,11 @@ const FEATURES = [
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <main className="flex-1">
-        <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 pt-24 pb-16 text-center">
+      <div className="flex justify-end px-4 pt-3">
+        <ThemeToggle />
+      </div>
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
+        <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 pt-16 pb-16 text-center">
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
             Job Application Tracker
           </h1>
