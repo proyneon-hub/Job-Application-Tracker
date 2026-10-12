@@ -114,4 +114,16 @@ describe("DemoRepository", () => {
     storage.setItem(DEMO_STORAGE_KEY, "{not json");
     expect(await makeRepo().listApplications()).toHaveLength(25);
   });
+
+  it("reset() throws away changes and restores the original sample data", async () => {
+    const repo = makeRepo();
+    const original = await repo.listApplications();
+    await repo.deleteApplication(original[0]!.id);
+    await repo.createApplication(input);
+
+    repo.reset();
+
+    expect(storage.getItem(DEMO_STORAGE_KEY)).toBeNull();
+    expect(await repo.listApplications()).toEqual(original);
+  });
 });

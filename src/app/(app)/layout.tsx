@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { DemoBanner } from "@/components/layout/demo-banner";
 import { NavLinks } from "@/components/layout/nav-links";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ApplicationsProvider } from "@/lib/repository/applications-provider";
@@ -10,6 +11,10 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <ApplicationsProvider>
       <div className="flex flex-1 flex-col">
+        {/* Reads the demo cookie, so it streams in after the static shell. */}
+        <Suspense>
+          <DemoBanner />
+        </Suspense>
         <header className="border-b">
           <div className="flex h-14 w-full items-center justify-between gap-3 px-4">
             <nav aria-label="Main" className="flex items-center gap-4 sm:gap-8">
