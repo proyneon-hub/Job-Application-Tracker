@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/applications", label: "Applications" },
+  { href: "/board", label: "Board" },
 ];
 
 /** Main navigation. The current page is marked with aria-current for screen readers. */

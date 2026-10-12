@@ -100,9 +100,24 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
         return saved;
       },
       async updateStatus(id, status) {
-        const saved = await repository.updateStatus(id, status);
-        replaceInList(saved);
-        return saved;
+        // Optimistic update: move the card straight away so drag and drop feels
+        // instant, then put it back if saving fails.
+        let previous: Application | undefined;
+        updateList((apps) =>
+          apps.map((a) => {
+            if (a.id !== id) return a;
+            previous = a;
+            return { ...a, status, updatedAt: new Date().toISOString() };
+          }),
+        );
+        try {
+          const saved = await repository.updateStatus(id, status);
+          replaceInList(saved);
+          return saved;
+        } catch (error) {
+          if (previous) replaceInList(previous);
+          throw error;
+        }
       },
       async deleteApplication(id) {
         await repository.deleteApplication(id);

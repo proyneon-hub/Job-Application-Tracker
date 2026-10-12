@@ -11,7 +11,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
     <ApplicationsProvider>
       <div className="flex flex-1 flex-col">
         <header className="border-b">
-          <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4">
+          <div className="flex h-14 w-full items-center justify-between gap-3 px-4">
             <nav aria-label="Main" className="flex items-center gap-4 sm:gap-8">
               <Link href="/dashboard" className="hidden font-semibold tracking-tight sm:inline">
                 Job Tracker
@@ -27,7 +27,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
             </Suspense>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+        {/* Width is set per page group: see (standard)/layout.tsx. */}
+        <main className="w-full flex-1 px-4 py-6">{children}</main>
       </div>
     </ApplicationsProvider>
   );
