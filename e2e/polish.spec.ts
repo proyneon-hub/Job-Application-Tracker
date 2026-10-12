@@ -64,3 +64,12 @@ test("unknown pages: guests are asked to log in, signed-in or demo visitors get 
   expect(response?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
 });
+
+test("responses carry basic security headers", async ({ request }) => {
+  const response = await request.get("/");
+  const headers = response.headers();
+  expect(headers["x-content-type-options"]).toBe("nosniff");
+  expect(headers["x-frame-options"]).toBe("DENY");
+  expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(headers["permissions-policy"]).toContain("camera=()");
+});
