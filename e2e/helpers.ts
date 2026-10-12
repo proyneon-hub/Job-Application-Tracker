@@ -7,6 +7,11 @@ export async function startDemo(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Try the demo" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(demoBanner(page)).toBeVisible();
+}
+
+export function demoBanner(page: Page) {
+  return page.getByRole("region", { name: "Demo mode" });
 }
 
 export function column(page: Page, status: ApplicationStatus) {
