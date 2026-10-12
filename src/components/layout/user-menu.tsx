@@ -1,38 +1,19 @@
-import { cookies } from "next/headers";
-
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { logOut } from "@/lib/actions/auth";
-import { DEMO_COOKIE } from "@/lib/demo/mode";
-import { createClient } from "@/lib/supabase/server";
-
-import { ExitDemoButton } from "./exit-demo-button";
+import { getVisitor } from "@/lib/auth/visitor";
 
 /**
- * Shows who is logged in, plus a log out button (or the demo-mode equivalent).
- * Reads the session, so render it inside <Suspense>.
+ * Shows who is logged in, plus a log out button. In demo mode it shows nothing:
+ * the demo banner has its own actions. Reads the session, so render it inside <Suspense>.
  */
 export async function UserMenu() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const visitor = await getVisitor();
+  if (visitor.kind !== "user") return null;
 
-  if (!data && (await cookies()).get(DEMO_COOKIE)?.value === "1") {
-    return (
-      <div className="flex items-center gap-3">
-        {/* Hidden on phones to save space; the Exit demo button already says it. */}
-        <Badge variant="secondary" className="hidden sm:inline-flex">
-          Demo mode
-        </Badge>
-        <ExitDemoButton />
-      </div>
-    );
-  }
-
-  const email = data?.claims.email;
   return (
     <div className="flex items-center gap-3">
-      {email ? (
-        <span className="hidden text-sm text-muted-foreground sm:inline">{email}</span>
+      {visitor.email ? (
+        <span className="hidden text-sm text-muted-foreground sm:inline">{visitor.email}</span>
       ) : null}
       <form action={logOut}>
         <Button type="submit" variant="outline" size="sm">

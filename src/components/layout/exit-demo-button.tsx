@@ -7,7 +7,7 @@ import { clearDemoData } from "@/lib/repository/demo-repository";
 export function ExitDemoButton() {
   return (
     <form action="/demo/exit" method="post" onSubmit={() => clearDemoData()}>
-      <Button type="submit" variant="outline" size="sm">
+      <Button type="submit" variant="outline" size="sm" className="bg-transparent">
         Exit demo
       </Button>
     </form>
