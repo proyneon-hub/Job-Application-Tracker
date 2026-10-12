@@ -5,7 +5,7 @@
 
 Track every job application from wishlist to offer: a kanban board, follow-up reminders, and response-rate stats, with each user's data kept private by row-level security in the database.
 
-**Live demo:** _coming soon_ · Click **Try the demo** on the landing page to explore with made-up sample data. No account needed.
+**Live demo:** [job-application-tracker-two-beryl.vercel.app](https://job-application-tracker-two-beryl.vercel.app/) · Click **Try the demo** on the landing page to explore with made-up sample data. No account needed.
 
 ## What it does and why
 
