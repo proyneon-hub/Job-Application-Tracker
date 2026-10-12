@@ -5,6 +5,9 @@ import { createContext, use, useCallback, useEffect, useMemo, useState } from "r
 import type { ApplicationStatus } from "@/lib/applications/constants";
 import type { Application, ApplicationInput } from "@/lib/applications/types";
 
+import { isDemoModeInBrowser } from "@/lib/demo/mode";
+
+import { createDemoRepository } from "./demo-repository";
 import { createSupabaseRepository } from "./supabase-repository";
 import { RepositoryError, type ApplicationsRepository } from "./types";
 
@@ -33,7 +36,12 @@ const ApplicationsContext = createContext<ApplicationsContextValue | null>(null)
  * they're showing real data or demo data.
  */
 export function ApplicationsProvider({ children }: { children: React.ReactNode }) {
-  const repository = useMemo(() => createSupabaseRepository(), []);
+  // The one place that decides between real and demo data. Data is only fetched
+  // in the browser (in the effect below), so the server render never needs to know.
+  const repository = useMemo(
+    () => (isDemoModeInBrowser() ? createDemoRepository() : createSupabaseRepository()),
+    [],
+  );
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [loadCount, setLoadCount] = useState(0);
 
@@ -92,9 +100,24 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
         return saved;
       },
       async updateStatus(id, status) {
-        const saved = await repository.updateStatus(id, status);
-        replaceInList(saved);
-        return saved;
+        // Optimistic update: move the card straight away so drag and drop feels
+        // instant, then put it back if saving fails.
+        let previous: Application | undefined;
+        updateList((apps) =>
+          apps.map((a) => {
+            if (a.id !== id) return a;
+            previous = a;
+            return { ...a, status, updatedAt: new Date().toISOString() };
+          }),
+        );
+        try {
+          const saved = await repository.updateStatus(id, status);
+          replaceInList(saved);
+          return saved;
+        } catch (error) {
+          if (previous) replaceInList(previous);
+          throw error;
+        }
       },
       async deleteApplication(id) {
         await repository.deleteApplication(id);

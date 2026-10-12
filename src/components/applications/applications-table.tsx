@@ -68,7 +68,8 @@ export function ApplicationsTable({ applications }: { applications: Application[
   }
 
   return (
-    <div className="grid gap-4">
+    // grid-cols-1 (minmax(0, 1fr)) lets the table scroll sideways instead of widening the page.
+    <div className="grid grid-cols-1 gap-4">
       <search className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
         <div className="grid gap-2">
           <Label htmlFor="filter-query">Search</Label>

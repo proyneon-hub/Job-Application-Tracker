@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Applications" };
 
 export default function ApplicationsPage() {
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-1 gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
         <Button asChild>
