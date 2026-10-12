@@ -21,6 +21,12 @@ function browserStorage(): KeyValueStorage | null {
   }
 }
 
+/** The demo repository can also be reset to the original sample data. */
+export type DemoRepository = ApplicationsRepository & {
+  /** Throws away every change and goes back to the original sample data. */
+  reset(): void;
+};
+
 /**
  * Demo-mode implementation: everything lives in the visitor's own browser
  * (localStorage) and nothing is ever sent to a server or database.
@@ -31,7 +37,7 @@ function browserStorage(): KeyValueStorage | null {
  */
 export function createDemoRepository(
   options: { storage?: KeyValueStorage | null; today?: string } = {},
-): ApplicationsRepository {
+): DemoRepository {
   const storage = options.storage === undefined ? browserStorage() : options.storage;
   let memory: DemoData | null = null;
 
@@ -101,6 +107,15 @@ export function createDemoRepository(
   }
 
   return {
+    reset() {
+      memory = null;
+      try {
+        storage?.removeItem(DEMO_STORAGE_KEY);
+      } catch {
+        // Nothing stored; the next load re-seeds anyway.
+      }
+    },
+
     async listApplications() {
       return load().applications.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
     },

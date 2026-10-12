@@ -7,7 +7,7 @@ import type { Application, ApplicationInput } from "@/lib/applications/types";
 
 import { isDemoModeInBrowser } from "@/lib/demo/mode";
 
-import { createDemoRepository } from "./demo-repository";
+import { createDemoRepository, type DemoRepository } from "./demo-repository";
 import { createSupabaseRepository } from "./supabase-repository";
 import { RepositoryError, type ApplicationsRepository } from "./types";
 
@@ -24,6 +24,8 @@ type ApplicationsContextValue = {
   updateApplication: (id: string, input: ApplicationInput) => Promise<Application>;
   updateStatus: (id: string, status: ApplicationStatus) => Promise<Application>;
   deleteApplication: (id: string) => Promise<void>;
+  /** Only in demo mode: go back to the original sample data. */
+  resetDemo?: () => void;
 };
 
 const ApplicationsContext = createContext<ApplicationsContextValue | null>(null);
@@ -38,9 +40,13 @@ const ApplicationsContext = createContext<ApplicationsContextValue | null>(null)
 export function ApplicationsProvider({ children }: { children: React.ReactNode }) {
   // The one place that decides between real and demo data. Data is only fetched
   // in the browser (in the effect below), so the server render never needs to know.
-  const repository = useMemo(
-    () => (isDemoModeInBrowser() ? createDemoRepository() : createSupabaseRepository()),
+  const demoRepository = useMemo<DemoRepository | null>(
+    () => (isDemoModeInBrowser() ? createDemoRepository() : null),
     [],
+  );
+  const repository = useMemo<ApplicationsRepository>(
+    () => demoRepository ?? createSupabaseRepository(),
+    [demoRepository],
   );
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [loadCount, setLoadCount] = useState(0);
@@ -89,6 +95,12 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
       state,
       repository,
       reload,
+      resetDemo: demoRepository
+        ? () => {
+            demoRepository.reset();
+            reload();
+          }
+        : undefined,
       async createApplication(input) {
         const created = await repository.createApplication(input);
         updateList((apps) => [created, ...apps]);
@@ -124,7 +136,7 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
         updateList((apps) => apps.filter((a) => a.id !== id));
       },
     }),
-    [state, repository, reload, updateList, replaceInList],
+    [state, repository, demoRepository, reload, updateList, replaceInList],
   );
 
   return <ApplicationsContext value={value}>{children}</ApplicationsContext>;
