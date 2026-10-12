@@ -11,6 +11,8 @@ import { formatDate, formatDateTime, formatSalaryRange } from "@/lib/format";
 import { DeleteApplicationButton } from "./delete-application-button";
 import { EmptyState, WithApplications } from "./data-states";
 import { StatusBadge } from "./status-badge";
+import { StatusSelect } from "./status-select";
+import { StatusTimeline } from "./status-timeline";
 
 export function ApplicationDetail({ id }: { id: string }) {
   return (
@@ -101,6 +103,8 @@ function Details({ application: app }: { application: Application }) {
         </div>
       </div>
 
+      <StatusSelect application={app} />
+
       <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {fields.map(({ label, value }) => (
           <div key={label} className="grid gap-1">
@@ -121,6 +125,8 @@ function Details({ application: app }: { application: Application }) {
           <p className="text-muted-foreground">No notes yet.</p>
         )}
       </section>
+
+      <StatusTimeline application={app} />
 
       <p className="text-xs text-muted-foreground">
         Added {formatDateTime(app.createdAt)} · Last updated {formatDateTime(app.updatedAt)}
