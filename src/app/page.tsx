@@ -14,10 +14,19 @@ export default function Home() {
         <Button size="lg" asChild>
           <Link href="/signup">Get started</Link>
         </Button>
+        {/* A plain form POST: works without JavaScript, and can't be triggered by link prefetching. */}
+        <form action="/demo" method="post">
+          <Button size="lg" variant="secondary" type="submit">
+            Try the demo
+          </Button>
+        </form>
         <Button size="lg" variant="outline" asChild>
           <Link href="/login">Log in</Link>
         </Button>
       </div>
+      <p className="text-sm text-muted-foreground">
+        The demo needs no account. Its sample data stays in your browser.
+      </p>
     </main>
   );
 }

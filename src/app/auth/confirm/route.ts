@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { safeNextPath } from "@/lib/auth/routes";
+import { DEMO_COOKIE } from "@/lib/demo/mode";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -31,5 +32,8 @@ export async function GET(request: NextRequest) {
   }
 
   const destination = ok ? next : "/login?error=link_invalid";
-  return NextResponse.redirect(new URL(destination, request.url));
+  const response = NextResponse.redirect(new URL(destination, request.url));
+  // Logging in to a real account switches demo mode off.
+  if (ok) response.cookies.delete(DEMO_COOKIE);
+  return response;
 }

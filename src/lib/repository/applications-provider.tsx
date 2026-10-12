@@ -5,6 +5,9 @@ import { createContext, use, useCallback, useEffect, useMemo, useState } from "r
 import type { ApplicationStatus } from "@/lib/applications/constants";
 import type { Application, ApplicationInput } from "@/lib/applications/types";
 
+import { isDemoModeInBrowser } from "@/lib/demo/mode";
+
+import { createDemoRepository } from "./demo-repository";
 import { createSupabaseRepository } from "./supabase-repository";
 import { RepositoryError, type ApplicationsRepository } from "./types";
 
@@ -33,7 +36,12 @@ const ApplicationsContext = createContext<ApplicationsContextValue | null>(null)
  * they're showing real data or demo data.
  */
 export function ApplicationsProvider({ children }: { children: React.ReactNode }) {
-  const repository = useMemo(() => createSupabaseRepository(), []);
+  // The one place that decides between real and demo data. Data is only fetched
+  // in the browser (in the effect below), so the server render never needs to know.
+  const repository = useMemo(
+    () => (isDemoModeInBrowser() ? createDemoRepository() : createSupabaseRepository()),
+    [],
+  );
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [loadCount, setLoadCount] = useState(0);
 

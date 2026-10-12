@@ -1,9 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { HOME_PATH, safeNextPath } from "@/lib/auth/routes";
+import { DEMO_COOKIE } from "@/lib/demo/mode";
 import { createClient } from "@/lib/supabase/server";
 import {
   forgotPasswordSchema,
@@ -17,6 +18,11 @@ import { toFieldErrors, type FormState } from "./form-state";
 // Server Actions are public HTTP endpoints: anyone can call them with any data.
 // So every action validates its input with Zod here, on the server, even though
 // the forms also validate in the browser.
+
+/** Logging in to a real account switches demo mode off. */
+async function leaveDemoMode() {
+  (await cookies()).delete(DEMO_COOKIE);
+}
 
 /** This site's origin, used to build links in emails (Supabase checks it against an allow-list). */
 async function getOrigin() {
@@ -51,6 +57,7 @@ export async function signUp(_prev: FormState, formData: FormData): Promise<Form
 
   // If email confirmation is turned off in Supabase, the user is logged in straight away.
   if (data.session) {
+    await leaveDemoMode();
     redirect(HOME_PATH);
   }
 
@@ -77,6 +84,7 @@ export async function logIn(_prev: FormState, formData: FormData): Promise<FormS
     return { error: "Invalid email or password.", values };
   }
 
+  await leaveDemoMode();
   redirect(safeNextPath(formData.get("next")?.toString()));
 }
 
