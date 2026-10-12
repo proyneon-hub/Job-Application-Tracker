@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { DemoBanner } from "@/components/layout/demo-banner";
 import { NavLinks } from "@/components/layout/nav-links";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ApplicationsProvider } from "@/lib/repository/applications-provider";
 
@@ -27,13 +28,18 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
               </Suspense>
             </nav>
             {/* The user menu reads the session cookie, so it streams in after the static shell. */}
-            <Suspense fallback={<div className="h-8 w-20" />}>
-              <UserMenu />
-            </Suspense>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Suspense fallback={<div className="h-8 w-20" />}>
+                <UserMenu />
+              </Suspense>
+            </div>
           </div>
         </header>
         {/* Width is set per page group: see (standard)/layout.tsx. */}
-        <main className="w-full flex-1 px-4 py-6">{children}</main>
+        <main id="main" tabIndex={-1} className="w-full flex-1 px-4 py-6 outline-none">
+          {children}
+        </main>
       </div>
     </ApplicationsProvider>
   );
