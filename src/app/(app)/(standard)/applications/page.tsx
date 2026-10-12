@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ApplicationsTableSection } from "@/components/applications/applications-table";
+import { ExportCsvButton } from "@/components/applications/export-csv-button";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Applications" };
@@ -12,12 +13,15 @@ export default function ApplicationsPage() {
     <div className="grid grid-cols-1 gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Applications</h1>
-        <Button asChild>
-          <Link href="/applications/new">
-            <Plus aria-hidden="true" />
-            Add application
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <ExportCsvButton />
+          <Button asChild>
+            <Link href="/applications/new">
+              <Plus aria-hidden="true" />
+              Add application
+            </Link>
+          </Button>
+        </div>
       </div>
       <ApplicationsTableSection />
     </div>
