@@ -22,6 +22,7 @@ export type Database = {
           next_follow_up: string | null;
           notes: string | null;
           posting_url: string | null;
+          resume_id: string | null;
           role_title: string;
           salary_currency: string;
           salary_max: number | null;
@@ -43,6 +44,7 @@ export type Database = {
           next_follow_up?: string | null;
           notes?: string | null;
           posting_url?: string | null;
+          resume_id?: string | null;
           role_title: string;
           salary_currency?: string;
           salary_max?: number | null;
@@ -64,6 +66,7 @@ export type Database = {
           next_follow_up?: string | null;
           notes?: string | null;
           posting_url?: string | null;
+          resume_id?: string | null;
           role_title?: string;
           salary_currency?: string;
           salary_max?: number | null;
@@ -73,6 +76,44 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
           work_mode?: Database["public"]["Enums"]["work_mode"] | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "applications_resume_fkey";
+            columns: ["resume_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "resumes";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      resumes: {
+        Row: {
+          created_at: string;
+          id: string;
+          link_url: string | null;
+          name: string;
+          notes: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          link_url?: string | null;
+          name: string;
+          notes?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          link_url?: string | null;
+          name?: string;
+          notes?: string | null;
+          updated_at?: string;
+          user_id?: string;
         };
         Relationships: [];
       };
