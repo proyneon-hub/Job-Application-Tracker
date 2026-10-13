@@ -34,6 +34,7 @@ for (const theme of ["light", "dark"] as const) {
     test("app pages in demo mode", async ({ page }) => {
       await startDemo(page);
       await expect(page.getByText("Funnel by stage")).toBeVisible();
+      await expect(page.getByText("Response rate by resume")).toBeVisible();
       await expectNoViolations(page);
 
       await page.goto("/applications");
@@ -50,6 +51,12 @@ for (const theme of ["light", "dark"] as const) {
 
       await page.goto("/board");
       await expect(page.getByTestId("column-applied").getByRole("listitem").first()).toBeVisible();
+      await expectNoViolations(page);
+
+      await page.goto("/resumes");
+      await expect(page.getByRole("list", { name: "Your resumes" })).toBeVisible();
+      await expectNoViolations(page);
+      await page.getByRole("button", { name: "Add resume" }).click();
       await expectNoViolations(page);
 
       await page.goto("/no-such-page");
