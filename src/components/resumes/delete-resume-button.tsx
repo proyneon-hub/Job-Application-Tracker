@@ -68,7 +68,9 @@ export function DeleteResumeButton({
           <AlertDialogDescription>
             {usedBy === 0
               ? "No applications use this resume."
-              : `${usedBy} ${usedBy === 1 ? "application" : "applications"} will keep their details but no longer show which resume was sent.`}
+              : usedBy === 1
+                ? "1 application will keep its details but no longer show which resume was sent."
+                : `${usedBy} applications will keep their details but no longer show which resume was sent.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (

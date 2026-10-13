@@ -32,7 +32,7 @@ export function ResumeStats({ stats }: { stats: ResumeStat[] }) {
                 Replies
               </th>
               <th scope="col" className="pb-2 pl-3 font-medium">
-                Response rate
+                Rate
               </th>
             </tr>
           </thead>
