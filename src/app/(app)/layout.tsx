@@ -17,8 +17,18 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <DemoBanner />
         </Suspense>
         <header className="border-b">
-          <div className="flex h-14 w-full items-center justify-between gap-3 px-4">
-            <nav aria-label="Main" className="flex items-center gap-4 sm:gap-8">
+          {/* Phones: brand and actions on the first row, the nav links on a second row. */}
+          <div className="flex w-full flex-wrap items-center justify-between gap-x-3 px-4 sm:h-14 sm:flex-nowrap">
+            <Link
+              href="/dashboard"
+              className="flex h-12 items-center font-semibold tracking-tight sm:hidden"
+            >
+              Job Tracker
+            </Link>
+            <nav
+              aria-label="Main"
+              className="order-last flex h-10 w-full items-center gap-4 overflow-x-auto sm:order-none sm:h-auto sm:w-auto sm:gap-8"
+            >
               <Link href="/dashboard" className="hidden font-semibold tracking-tight sm:inline">
                 Job Tracker
               </Link>
