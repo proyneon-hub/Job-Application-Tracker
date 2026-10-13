@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import type { Application, StatusEvent } from "@/lib/applications/types";
 import { todayLocal } from "@/lib/dates";
 import { useApplications } from "@/lib/repository/applications-provider";
+import type { Resume } from "@/lib/resumes/types";
+import { getResumeStats } from "@/lib/stats/by-resume";
 import { getFollowUps } from "@/lib/stats/follow-ups";
 import { getFunnel } from "@/lib/stats/funnel";
 import { getSummaryStats } from "@/lib/stats/summary";
@@ -15,13 +17,14 @@ import { getApplicationsPerWeek } from "@/lib/stats/weekly";
 
 import { FollowUps } from "./follow-ups";
 import { FunnelChart } from "./funnel-chart";
+import { ResumeStats } from "./resume-stats";
 import { StatTile } from "./stat-tile";
 import { WeeklyChart } from "./weekly-chart";
 
 export function DashboardSection() {
   return (
     <WithApplications>
-      {(applications) =>
+      {(applications, resumes) =>
         applications.length === 0 ? (
           <EmptyState
             title="Welcome! Let's add your first application"
@@ -33,14 +36,14 @@ export function DashboardSection() {
             }
           />
         ) : (
-          <Dashboard applications={applications} />
+          <Dashboard applications={applications} resumes={resumes} />
         )
       }
     </WithApplications>
   );
 }
 
-function Dashboard({ applications }: { applications: Application[] }) {
+function Dashboard({ applications, resumes }: { applications: Application[]; resumes: Resume[] }) {
   const { repository } = useApplications();
   const [events, setEvents] = useState<StatusEvent[] | null>(null);
   const [eventsFailed, setEventsFailed] = useState(false);
@@ -67,6 +70,10 @@ function Dashboard({ applications }: { applications: Application[] }) {
     [applications, events],
   );
   const funnel = useMemo(() => getFunnel(applications, events ?? []), [applications, events]);
+  const resumeStats = useMemo(
+    () => getResumeStats(applications, events ?? [], resumes),
+    [applications, events, resumes],
+  );
   const statsReady = events !== null;
 
   const responseRate =
@@ -113,6 +120,8 @@ function Dashboard({ applications }: { applications: Application[] }) {
           <WeeklyChart weeks={weeks} />
           {statsReady ? <FunnelChart steps={funnel} /> : null}
         </div>
+        {/* Only once the user keeps track of resumes; otherwise it would be one "none" row. */}
+        {statsReady && resumes.length > 0 ? <ResumeStats stats={resumeStats} /> : null}
       </section>
     </div>
   );

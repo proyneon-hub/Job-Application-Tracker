@@ -1,14 +1,14 @@
 -- Proves row-level security isolates users from each other.
 -- Run with: npx supabase test db   (needs `npx supabase start` first; runs in CI too)
 --
--- Two users, Alice (A) and Bob (B), are created. Alice adds an application,
--- then we act as Bob and try every way of reading or changing it.
+-- Two users, Alice (A) and Bob (B), are created. Alice adds an application and
+-- a resume, then we act as Bob and try every way of reading or changing them.
 -- Everything runs inside a transaction that is rolled back at the end.
 
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(27);
 
 -- Test users. Fixed ids so the assertions below can refer to them.
 insert into auth.users (id, email) values
@@ -70,6 +70,24 @@ select throws_ok(
   'Users cannot forge status history directly'
 );
 
+select lives_ok(
+  $$ insert into public.resumes (id, name, link_url)
+     values ('22222222-2222-2222-2222-222222222222', 'General v1', 'https://example.com/cv.pdf') $$,
+  'Alice can create a resume'
+);
+
+select lives_ok(
+  $$ update public.applications set resume_id = '22222222-2222-2222-2222-222222222222'
+     where id = '11111111-1111-1111-1111-111111111111' $$,
+  'Alice can link her resume to her application'
+);
+
+select throws_ok(
+  $$ insert into public.resumes (name) values ('General v1') $$,
+  '23505', null,
+  'Resume names are unique per user'
+);
+
 -- ---------------------------------------------------------------------------
 -- Act as Bob
 -- ---------------------------------------------------------------------------
@@ -99,6 +117,29 @@ select is_empty(
   'Bob cannot delete Alice''s application'
 );
 
+select is(
+  (select count(*)::int from public.resumes),
+  0,
+  'Bob sees none of Alice''s resumes'
+);
+
+select is_empty(
+  $$ update public.resumes set name = 'Hijacked'
+     where id = '22222222-2222-2222-2222-222222222222' returning id $$,
+  'Bob cannot update Alice''s resume'
+);
+
+select is_empty(
+  $$ delete from public.resumes where id = '22222222-2222-2222-2222-222222222222' returning id $$,
+  'Bob cannot delete Alice''s resume'
+);
+
+select throws_ok(
+  $$ insert into public.resumes (name, user_id) values ('Sneaky CV', '00000000-0000-0000-0000-00000000000a') $$,
+  '42501', null,
+  'Bob cannot create a resume owned by Alice'
+);
+
 select throws_ok(
   $$ insert into public.applications (company, role_title, user_id)
      values ('Sneaky Corp', 'Spy', '00000000-0000-0000-0000-00000000000a') $$,
@@ -117,6 +158,14 @@ select is(
   'Bob sees exactly his own application'
 );
 
+-- The foreign key check bypasses RLS, so this is caught by the composite key instead.
+select throws_ok(
+  $$ update public.applications set resume_id = '22222222-2222-2222-2222-222222222222'
+     where company = 'Bobco Fictional Inc' $$,
+  '23503', null,
+  'Bob cannot link Alice''s resume to his own application'
+);
+
 -- ---------------------------------------------------------------------------
 -- Back to Alice: her data is untouched
 -- ---------------------------------------------------------------------------
@@ -126,6 +175,14 @@ select results_eq(
   $$ select company from public.applications $$,
   $$ values ('Example Widgets Ltd'::text) $$,
   'Alice still has exactly her one, unmodified application'
+);
+
+delete from public.resumes where id = '22222222-2222-2222-2222-222222222222';
+
+select results_eq(
+  $$ select company, resume_id from public.applications $$,
+  $$ values ('Example Widgets Ltd'::text, null::uuid) $$,
+  'Deleting a resume keeps the application and clears its link'
 );
 
 -- ---------------------------------------------------------------------------
@@ -145,6 +202,12 @@ select throws_ok(
   $$ select * from public.status_events $$,
   '42501', null,
   'Anonymous visitors cannot read status history'
+);
+
+select throws_ok(
+  $$ select * from public.resumes $$,
+  '42501', null,
+  'Anonymous visitors cannot read resumes'
 );
 
 select * from finish();

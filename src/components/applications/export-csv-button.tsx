@@ -15,10 +15,11 @@ import { useApplications } from "@/lib/repository/applications-provider";
 export function ExportCsvButton() {
   const { state } = useApplications();
   const applications = state.status === "ready" ? state.applications : [];
+  const resumes = state.status === "ready" ? state.resumes : [];
 
   function download() {
     // The byte-order mark makes Excel read the file as UTF-8 (accents, € and so on).
-    const blob = new Blob(["﻿", applicationsToCsv(applications)], {
+    const blob = new Blob(["﻿", applicationsToCsv(applications, resumes)], {
       type: "text/csv;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);

@@ -7,6 +7,8 @@ export type ApplicationFilters = {
   query: string;
   status: ApplicationStatus | "all";
   workMode: WorkMode | "all";
+  /** A resume id, "none" for applications with no resume recorded, or "all". */
+  resume: string;
   sort: DateSort;
 };
 
@@ -14,6 +16,7 @@ export const DEFAULT_FILTERS: ApplicationFilters = {
   query: "",
   status: "all",
   workMode: "all",
+  resume: "all",
   sort: "newest",
 };
 
@@ -31,8 +34,14 @@ function matchesQuery(app: Application, query: string) {
   return SEARCHABLE_FIELDS.some((field) => app[field]?.toLowerCase().includes(query));
 }
 
+function matchesResume(app: Application, resume: string) {
+  if (resume === "all") return true;
+  if (resume === "none") return app.resumeId === null;
+  return app.resumeId === resume;
+}
+
 /**
- * Filters by search text, status and work mode, then sorts by date applied.
+ * Filters by search text, status, work mode and resume, then sorts by date applied.
  * Applications without a date applied (e.g. wishlist items) always go last.
  * Pure function: returns a new array and never changes its input.
  */
@@ -45,6 +54,7 @@ export function filterApplications(applications: Application[], filters: Applica
       (app) =>
         (filters.status === "all" || app.status === filters.status) &&
         (filters.workMode === "all" || app.workMode === filters.workMode) &&
+        matchesResume(app, filters.resume) &&
         matchesQuery(app, query),
     )
     .toSorted((a, b) => {
@@ -60,5 +70,10 @@ export function filterApplications(applications: Application[], filters: Applica
 }
 
 export function hasActiveFilters(filters: ApplicationFilters) {
-  return filters.query.trim() !== "" || filters.status !== "all" || filters.workMode !== "all";
+  return (
+    filters.query.trim() !== "" ||
+    filters.status !== "all" ||
+    filters.workMode !== "all" ||
+    filters.resume !== "all"
+  );
 }

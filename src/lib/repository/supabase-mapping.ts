@@ -1,9 +1,12 @@
 import type { Application, ApplicationInput, StatusEvent } from "@/lib/applications/types";
+import type { Resume, ResumeInput } from "@/lib/resumes/types";
 import type { Database } from "@/lib/supabase/database.types";
 
 type ApplicationRow = Database["public"]["Tables"]["applications"]["Row"];
 type ApplicationWrite = Database["public"]["Tables"]["applications"]["Insert"];
 type StatusEventRow = Database["public"]["Tables"]["status_events"]["Row"];
+type ResumeRow = Database["public"]["Tables"]["resumes"]["Row"];
+type ResumeWrite = Database["public"]["Tables"]["resumes"]["Insert"];
 
 // The database uses snake_case column names; the app uses camelCase.
 // Keeping the translation in one place means the rest of the app never sees a row.
@@ -26,6 +29,7 @@ export function toApplication(row: ApplicationRow): Application {
     contactName: row.contact_name,
     contactEmail: row.contact_email,
     notes: row.notes,
+    resumeId: row.resume_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -49,6 +53,7 @@ export function toApplicationWrite(input: ApplicationInput): ApplicationWrite {
     contact_name: input.contactName,
     contact_email: input.contactEmail,
     notes: input.notes,
+    resume_id: input.resumeId,
   };
 }
 
@@ -60,4 +65,20 @@ export function toStatusEvent(row: StatusEventRow): StatusEvent {
     toStatus: row.to_status,
     changedAt: row.changed_at,
   };
+}
+
+export function toResume(row: ResumeRow): Resume {
+  return {
+    id: row.id,
+    name: row.name,
+    linkUrl: row.link_url,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Columns to write. As with applications, user_id comes from the session. */
+export function toResumeWrite(input: ResumeInput): ResumeWrite {
+  return { name: input.name, link_url: input.linkUrl, notes: input.notes };
 }

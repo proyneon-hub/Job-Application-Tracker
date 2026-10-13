@@ -1,6 +1,7 @@
 import type { ApplicationStatus, WorkMode } from "@/lib/applications/constants";
 import type { Application, StatusEvent } from "@/lib/applications/types";
 import { addDays } from "@/lib/dates";
+import type { Resume } from "@/lib/resumes/types";
 
 // Demo data for "Try the demo". Every company, person and email address here is
 // invented (emails use the reserved .test domain). Dates are relative to "today"
@@ -329,6 +330,36 @@ const ENTRIES: SeedEntry[] = [
   },
 ];
 
+const RESUMES = [
+  {
+    name: "General – v2",
+    file: "general-v2",
+    notes: "One page. Leads with shipped projects.",
+  },
+  {
+    name: "Frontend focus – v3",
+    file: "frontend-v3",
+    notes: "Accessibility and design-system work up top.",
+  },
+  {
+    name: "Data & analytics – v1",
+    file: "data-v1",
+    notes: "Charts and dashboard projects first.",
+  },
+] as const;
+
+/**
+ * Which resume (index into RESUMES) went with an entry, or null.
+ * Nothing for wishlist items (not sent yet) or career fairs (handed over on paper).
+ */
+function resumeIndexFor(entry: SeedEntry): number | null {
+  if (!entry.history.some(([status]) => status !== "wishlist")) return null;
+  if (entry.source === "Career fair") return null;
+  if (/data/i.test(entry.role)) return 2;
+  if (/frontend|ui|react|typescript|web/i.test(entry.role)) return 1;
+  return 0;
+}
+
 /** Deterministic, valid-looking UUID so seed ids are stable between page loads. */
 function seedId(prefix: string, n: number) {
   return `${prefix}-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -339,12 +370,23 @@ function timestampOn(date: string, minute: number) {
   return `${date}T12:${String(minute % 60).padStart(2, "0")}:00.000Z`;
 }
 
-export type DemoData = { applications: Application[]; events: StatusEvent[] };
+export type DemoData = { applications: Application[]; events: StatusEvent[]; resumes: Resume[] };
 
 /** Builds the demo dataset for the given "today" ("YYYY-MM-DD"). Pure: same input, same output. */
 export function createDemoData(today: string): DemoData {
   const applications: Application[] = [];
   const events: StatusEvent[] = [];
+  const resumes: Resume[] = RESUMES.map((resume, index) => {
+    const at = timestampOn(addDays(today, -90 + index * 10), index);
+    return {
+      id: seedId("de0c0000", index + 1),
+      name: resume.name,
+      linkUrl: `https://files.example.test/resume-${resume.file}.pdf`,
+      notes: resume.notes,
+      createdAt: at,
+      updatedAt: at,
+    };
+  });
 
   ENTRIES.forEach((entry, index) => {
     const id = seedId("de000000", index + 1);
@@ -356,6 +398,7 @@ export function createDemoData(today: string): DemoData {
     const first = steps[0]!;
     const last = steps[steps.length - 1]!;
     const appliedStep = steps.find((s) => s.status === "applied");
+    const resumeIndex = resumeIndexFor(entry);
 
     steps.forEach((step, i) => {
       events.push({
@@ -384,10 +427,11 @@ export function createDemoData(today: string): DemoData {
       contactName: entry.contact?.[0] ?? null,
       contactEmail: entry.contact?.[1] ?? null,
       notes: entry.notes ?? null,
+      resumeId: resumeIndex === null ? null : resumes[resumeIndex]!.id,
       createdAt: first.at,
       updatedAt: last.at,
     });
   });
 
-  return { applications, events };
+  return { applications, events, resumes };
 }

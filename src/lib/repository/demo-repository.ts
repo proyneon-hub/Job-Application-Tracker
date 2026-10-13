@@ -3,11 +3,15 @@ import type { Application, ApplicationInput, StatusEvent } from "@/lib/applicati
 import { toFieldErrors } from "@/lib/actions/form-state";
 import { todayLocal } from "@/lib/dates";
 import { createDemoData, type DemoData } from "@/lib/demo/seed";
+import type { Resume, ResumeInput } from "@/lib/resumes/types";
 import { applicationInputSchema } from "@/lib/validation/application";
+import { resumeInputSchema } from "@/lib/validation/resume";
 
 import { RepositoryError, type ApplicationsRepository } from "./types";
 
-export const DEMO_STORAGE_KEY = "jat-demo-v1";
+// v2 added resumes. Older saved demos are dropped and re-seeded.
+export const DEMO_STORAGE_KEY = "jat-demo-v2";
+const OLD_STORAGE_KEYS = ["jat-demo-v1"];
 
 /** The bits of the Web Storage API we use, so tests can pass in a fake. */
 type KeyValueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -54,7 +58,16 @@ export function createDemoRepository(
     }
     memory = createDemoData(options.today ?? todayLocal());
     save(memory);
+    removeOldVersions();
     return memory;
+  }
+
+  function removeOldVersions() {
+    try {
+      for (const key of OLD_STORAGE_KEYS) storage?.removeItem(key);
+    } catch {
+      // Nothing to tidy up.
+    }
   }
 
   function save(data: DemoData) {
@@ -71,7 +84,34 @@ export function createDemoRepository(
     if (!parsed.success) {
       throw new RepositoryError("Please fix the highlighted fields.", toFieldErrors(parsed.error));
     }
+    // Mirrors the foreign key: the resume has to exist.
+    const { resumeId } = parsed.data;
+    if (resumeId !== null && !load().resumes.some((r) => r.id === resumeId)) {
+      throw new RepositoryError("Please fix the highlighted fields.", {
+        resumeId: ["That resume no longer exists. Choose another one."],
+      });
+    }
     return parsed.data;
+  }
+
+  function validateResume(input: unknown, id?: string): ResumeInput {
+    const parsed = resumeInputSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new RepositoryError("Please fix the highlighted fields.", toFieldErrors(parsed.error));
+    }
+    // Mirrors the unique (user_id, name) constraint.
+    if (load().resumes.some((r) => r.name === parsed.data.name && r.id !== id)) {
+      throw new RepositoryError("Please fix the highlighted fields.", {
+        name: ["You already have a resume with that name."],
+      });
+    }
+    return parsed.data;
+  }
+
+  function findResumeIndex(data: DemoData, id: string) {
+    const index = data.resumes.findIndex((r) => r.id === id);
+    if (index === -1) throw new RepositoryError("That resume doesn't exist or was deleted.");
+    return index;
   }
 
   function findIndex(data: DemoData, id: string) {
@@ -102,7 +142,7 @@ export function createDemoRepository(
         ? [...data.events, statusEvent(id, before.status, after.status, now)]
         : data.events;
     const applications = data.applications.with(index, after);
-    save({ applications, events });
+    save({ ...data, applications, events });
     return after;
   }
 
@@ -138,6 +178,7 @@ export function createDemoRepository(
         updatedAt: now,
       };
       save({
+        ...data,
         applications: [created, ...data.applications],
         events: [...data.events, statusEvent(created.id, null, created.status, now)],
       });
@@ -158,8 +199,49 @@ export function createDemoRepository(
       const data = load();
       findIndex(data, id);
       save({
+        ...data,
         applications: data.applications.filter((a) => a.id !== id),
         events: data.events.filter((e) => e.applicationId !== id),
+      });
+    },
+
+    async listResumes() {
+      return load().resumes.toSorted((a, b) => a.name.localeCompare(b.name));
+    },
+
+    async createResume(input) {
+      const valid = validateResume(input);
+      const data = load();
+      const now = new Date().toISOString();
+      const created: Resume = { ...valid, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+      save({ ...data, resumes: [...data.resumes, created] });
+      return created;
+    },
+
+    async updateResume(id, input) {
+      const valid = validateResume(input, id);
+      const data = load();
+      const index = findResumeIndex(data, id);
+      const saved: Resume = {
+        ...data.resumes[index]!,
+        ...valid,
+        updatedAt: new Date().toISOString(),
+      };
+      save({ ...data, resumes: data.resumes.with(index, saved) });
+      return saved;
+    },
+
+    async deleteResume(id) {
+      const data = load();
+      findResumeIndex(data, id);
+      // Like `on delete set null (resume_id)`: keep the applications, clear the link.
+      const now = new Date().toISOString();
+      save({
+        ...data,
+        resumes: data.resumes.filter((r) => r.id !== id),
+        applications: data.applications.map((a) =>
+          a.resumeId === id ? { ...a, resumeId: null, updatedAt: now } : a,
+        ),
       });
     },
   };

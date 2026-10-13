@@ -26,12 +26,15 @@ test.describe("Dashboard (demo mode)", () => {
 
   test("shows the headline stats and charts", async ({ page }) => {
     await expect(page.getByText("Total applications").locator("..")).toContainText("25");
-    await expect(page.getByText("Response rate").locator("..")).toContainText("%");
+    await expect(page.getByText("Response rate", { exact: true }).locator("..")).toContainText("%");
     await expect(page.getByText("Avg. time to first response").locator("..")).toContainText("days");
     await expect(page.getByRole("img", { name: /^Column chart: week of/ })).toBeVisible();
     await expect(page.getByRole("figure").filter({ hasText: "Funnel by stage" })).toContainText(
       "Offer",
     );
+    await expect(
+      page.getByRole("figure").filter({ hasText: "Response rate by resume" }).getByRole("row"),
+    ).toHaveCount(5); // header + 3 seeded resumes + "No resume recorded"
   });
 
   test("the weekly chart can be read as a table", async ({ page }) => {
@@ -42,6 +45,7 @@ test.describe("Dashboard (demo mode)", () => {
       "true",
     );
     // A header row plus one row per week.
-    await expect(page.getByRole("table").getByRole("row")).toHaveCount(9);
+    const weekly = page.getByRole("figure").filter({ hasText: "Applications per week" });
+    await expect(weekly.getByRole("table").getByRole("row")).toHaveCount(9);
   });
 });

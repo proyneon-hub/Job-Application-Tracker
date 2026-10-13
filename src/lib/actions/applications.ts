@@ -24,6 +24,20 @@ const SESSION_EXPIRED = "Your session has expired. Please log in again.";
 const NOT_FOUND = "That application doesn't exist or was deleted.";
 const SAVE_FAILED = "Couldn't save your changes. Please try again.";
 
+/** Postgres error code for a foreign key violation: the chosen resume isn't one of the user's. */
+const FOREIGN_KEY_VIOLATION = "23503";
+
+function saveError(code: string | undefined): ActionResult<never> {
+  if (code === FOREIGN_KEY_VIOLATION) {
+    return {
+      ok: false,
+      error: "Please fix the highlighted fields.",
+      fieldErrors: { resumeId: ["That resume no longer exists. Choose another one."] },
+    };
+  }
+  return { ok: false, error: SAVE_FAILED };
+}
+
 async function getClientForUser() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -48,7 +62,7 @@ export async function createApplication(input: unknown): Promise<ActionResult<Ap
     .select()
     .single();
 
-  if (error) return { ok: false, error: SAVE_FAILED };
+  if (error) return saveError(error.code);
   return { ok: true, data: toApplication(data) };
 }
 
@@ -78,7 +92,7 @@ export async function updateApplication(
     .select()
     .maybeSingle();
 
-  if (error) return { ok: false, error: SAVE_FAILED };
+  if (error) return saveError(error.code);
   if (!data) return { ok: false, error: NOT_FOUND };
   return { ok: true, data: toApplication(data) };
 }

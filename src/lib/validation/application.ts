@@ -8,8 +8,16 @@ import { APPLICATION_STATUSES, WORK_MODES } from "@/lib/applications/constants";
 // The limits mirror the CHECK constraints in the database, so bad data is caught with a
 // friendly message here before Postgres would reject it.
 
-const optionalText = (max: number) =>
+export const optionalText = (max: number) =>
   z.string().trim().max(max, `Use ${max} characters or fewer.`).nullable();
+
+/** Only http(s) links, so a stored link can never be a `javascript:` URL. */
+export const webLink = z
+  .url({
+    protocol: /^https?$/,
+    message: "Enter a full link starting with http:// or https://.",
+  })
+  .max(2000, "That link is too long.");
 
 const isoDate = z.iso.date("Use a valid date.").nullable();
 
@@ -32,13 +40,7 @@ export const applicationInputSchema = z
       .trim()
       .min(1, "Enter the role title.")
       .max(200, "Use 200 characters or fewer."),
-    postingUrl: z
-      .url({
-        protocol: /^https?$/,
-        message: "Enter a full link starting with http:// or https://.",
-      })
-      .max(2000, "That link is too long.")
-      .nullable(),
+    postingUrl: webLink.nullable(),
     location: optionalText(200),
     workMode: z.enum(WORK_MODES, "Choose a work mode.").nullable(),
     salaryMin: salary,
@@ -55,6 +57,7 @@ export const applicationInputSchema = z
     contactName: optionalText(200),
     contactEmail: z.email("Enter a valid email address.").max(320).nullable(),
     notes: optionalText(5000),
+    resumeId: z.uuid("Choose a resume from the list.").nullable(),
   })
   .refine((a) => a.salaryMin === null || a.salaryMax === null || a.salaryMin <= a.salaryMax, {
     message: "The maximum must be at least the minimum.",
@@ -62,7 +65,7 @@ export const applicationInputSchema = z
   });
 
 /** "" or whitespace -> null, otherwise the trimmed string. */
-const blankToNull = z
+export const blankToNull = z
   .string()
   .optional()
   .transform((value) => {
@@ -99,6 +102,7 @@ export const applicationFormSchema = z
     contactName: blankToNull,
     contactEmail: blankToNull,
     notes: blankToNull,
+    resumeId: blankToNull,
   })
   .pipe(applicationInputSchema);
 

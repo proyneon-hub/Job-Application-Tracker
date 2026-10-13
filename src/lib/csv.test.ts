@@ -56,4 +56,24 @@ describe("applicationsToCsv", () => {
     expect(row).toMatch(/^Sample Paper Co,Designer,Interview,On-site,/);
     expect(row).toContain('"Bring portfolio, ask about team"');
   });
+
+  it("lists the resume by name, guarding it like any other cell", () => {
+    const resume = {
+      id: "de0c0000-0000-4000-8000-000000000001",
+      name: "=Frontend – v3",
+      linkUrl: null,
+      notes: null,
+      createdAt: "2026-10-01T09:00:00.000Z",
+      updatedAt: "2026-10-01T09:00:00.000Z",
+    };
+    const csv = applicationsToCsv(
+      [makeApplication({ resumeId: resume.id }), makeApplication({ resumeId: null })],
+      [resume],
+    );
+    const [header, linked, unlinked] = csv.split("\r\n").map((line) => line.split(","));
+    const column = header!.indexOf("Resume");
+    expect(column).toBeGreaterThan(-1);
+    expect(linked![column]).toBe("'=Frontend – v3");
+    expect(unlinked![column]).toBe("");
+  });
 });

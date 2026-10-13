@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toApplication, toApplicationWrite } from "./supabase-mapping";
+import { toApplication, toApplicationWrite, toResume, toResumeWrite } from "./supabase-mapping";
 
 const row = {
   id: "11111111-1111-1111-1111-111111111111",
@@ -20,6 +20,7 @@ const row = {
   contact_name: null,
   contact_email: null,
   notes: null,
+  resume_id: "22222222-2222-4222-8222-222222222222",
   created_at: "2026-10-01T09:00:00Z",
   updated_at: "2026-10-01T09:00:00Z",
 };
@@ -35,5 +36,25 @@ describe("supabase mapping", () => {
     expect(write).not.toHaveProperty("user_id");
     const { id: _rowId, user_id: _owner, created_at: _rc, updated_at: _ru, ...expected } = row;
     expect(write).toEqual(expected);
+  });
+
+  it("round-trips a resume without leaking user_id", () => {
+    const resumeRow = {
+      id: "22222222-2222-4222-8222-222222222222",
+      user_id: "00000000-0000-0000-0000-00000000000a",
+      name: "General – v1",
+      link_url: "https://files.example.test/cv.pdf",
+      notes: null,
+      created_at: "2026-10-01T09:00:00Z",
+      updated_at: "2026-10-01T09:00:00Z",
+    };
+    const resume = toResume(resumeRow);
+    expect(resume).not.toHaveProperty("userId");
+    const { id: _id, createdAt: _c, updatedAt: _u, ...input } = resume;
+    expect(toResumeWrite(input)).toEqual({
+      name: "General – v1",
+      link_url: "https://files.example.test/cv.pdf",
+      notes: null,
+    });
   });
 });

@@ -14,6 +14,7 @@ test.describe("phone layout", () => {
     "/applications",
     "/applications/new",
     "/board",
+    "/resumes",
   ]) {
     test(`${path} fits the screen width`, async ({ page }) => {
       await startDemo(page);

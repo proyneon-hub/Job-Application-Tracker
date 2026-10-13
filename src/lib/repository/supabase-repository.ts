@@ -5,9 +5,10 @@ import {
   updateApplicationStatus,
 } from "@/lib/actions/applications";
 import type { ActionResult } from "@/lib/actions/result";
+import { createResume, deleteResume, updateResume } from "@/lib/actions/resumes";
 import { createClient } from "@/lib/supabase/client";
 
-import { toApplication, toStatusEvent } from "./supabase-mapping";
+import { toApplication, toResume, toStatusEvent } from "./supabase-mapping";
 import { RepositoryError, type ApplicationsRepository } from "./types";
 
 const LOAD_FAILED = "Couldn't load your applications. Check your connection and try again.";
@@ -47,6 +48,15 @@ export function createSupabaseRepository(): ApplicationsRepository {
       return data.map(toStatusEvent);
     },
 
+    async listResumes() {
+      const { data, error } = await supabase
+        .from("resumes")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw new RepositoryError(LOAD_FAILED);
+      return data.map(toResume);
+    },
+
     async createApplication(input) {
       return unwrap(await createApplication(input));
     },
@@ -61,6 +71,18 @@ export function createSupabaseRepository(): ApplicationsRepository {
 
     async deleteApplication(id) {
       unwrap(await deleteApplication(id));
+    },
+
+    async createResume(input) {
+      return unwrap(await createResume(input));
+    },
+
+    async updateResume(id, input) {
+      return unwrap(await updateResume(id, input));
+    },
+
+    async deleteResume(id) {
+      unwrap(await deleteResume(id));
     },
   };
 }

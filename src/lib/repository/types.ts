@@ -1,5 +1,6 @@
 import type { ApplicationStatus } from "@/lib/applications/constants";
 import type { Application, ApplicationInput, StatusEvent } from "@/lib/applications/types";
+import type { Resume, ResumeInput } from "@/lib/resumes/types";
 
 /** A failed write: a message for the whole form, plus optional per-field messages. */
 export class RepositoryError extends Error {
@@ -13,7 +14,8 @@ export class RepositoryError extends Error {
 }
 
 /**
- * The one interface the UI uses to read and write applications.
+ * The one interface the UI uses to read and write applications (and the
+ * resume versions they link to).
  *
  * There are two implementations:
  * - SupabaseRepository: real accounts, data in Postgres (protected by row-level security).
@@ -30,4 +32,10 @@ export interface ApplicationsRepository {
   deleteApplication(id: string): Promise<void>;
   /** Status history, oldest first. Pass an id for one application, or nothing for all. */
   listStatusEvents(applicationId?: string): Promise<StatusEvent[]>;
+  /** Resume versions, sorted by name. */
+  listResumes(): Promise<Resume[]>;
+  createResume(input: ResumeInput): Promise<Resume>;
+  updateResume(id: string, input: ResumeInput): Promise<Resume>;
+  /** Deletes the resume. Applications that used it are kept, with their link cleared. */
+  deleteResume(id: string): Promise<void>;
 }

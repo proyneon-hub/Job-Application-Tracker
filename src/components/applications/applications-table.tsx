@@ -33,6 +33,7 @@ import {
   type DateSort,
 } from "@/lib/applications/filter";
 import type { Application } from "@/lib/applications/types";
+import type { Resume } from "@/lib/resumes/types";
 import { formatDate } from "@/lib/format";
 
 import { EmptyState, WithApplications } from "./data-states";
@@ -42,13 +43,22 @@ import { StatusBadge } from "./status-badge";
 export function ApplicationsTableSection() {
   return (
     <WithApplications>
-      {(applications) => <ApplicationsTable applications={applications} />}
+      {(applications, resumes) => (
+        <ApplicationsTable applications={applications} resumes={resumes} />
+      )}
     </WithApplications>
   );
 }
 
-export function ApplicationsTable({ applications }: { applications: Application[] }) {
+export function ApplicationsTable({
+  applications,
+  resumes = [],
+}: {
+  applications: Application[];
+  resumes?: Resume[];
+}) {
   const [filters, setFilters] = useState<ApplicationFilters>(DEFAULT_FILTERS);
+  const resumeNames = new Map(resumes.map((r) => [r.id, r.name]));
   const visible = filterApplications(applications, filters);
 
   const update = (change: Partial<ApplicationFilters>) => setFilters((f) => ({ ...f, ...change }));
@@ -70,8 +80,8 @@ export function ApplicationsTable({ applications }: { applications: Application[
   return (
     // grid-cols-1 (minmax(0, 1fr)) lets the table scroll sideways instead of widening the page.
     <div className="grid grid-cols-1 gap-4">
-      <search className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
-        <div className="grid gap-2">
+      <search className="grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-[minmax(12rem,1fr)_repeat(4,auto)]">
+        <div className="grid gap-2 sm:col-span-2 lg:col-span-1">
           <Label htmlFor="filter-query">Search</Label>
           <div className="relative">
             <Search
@@ -119,6 +129,22 @@ export function ApplicationsTable({ applications }: { applications: Application[
           </NativeSelect>
         </div>
         <div className="grid gap-2">
+          <Label htmlFor="filter-resume">Resume</Label>
+          <NativeSelect
+            id="filter-resume"
+            value={filters.resume}
+            onChange={(e) => update({ resume: e.target.value })}
+          >
+            <option value="all">All resumes</option>
+            {resumes.map((resume) => (
+              <option key={resume.id} value={resume.id}>
+                {resume.name}
+              </option>
+            ))}
+            <option value="none">None recorded</option>
+          </NativeSelect>
+        </div>
+        <div className="grid gap-2">
           <Label htmlFor="filter-sort">Date applied</Label>
           <NativeSelect
             id="filter-sort"
@@ -159,6 +185,7 @@ export function ApplicationsTable({ applications }: { applications: Application[
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden md:table-cell">Work mode</TableHead>
                 <TableHead className="hidden lg:table-cell">Location</TableHead>
+                <TableHead className="hidden xl:table-cell">Resume</TableHead>
                 <TableHead>Applied</TableHead>
                 <TableHead className="hidden sm:table-cell">Follow up</TableHead>
               </TableRow>
@@ -183,6 +210,9 @@ export function ApplicationsTable({ applications }: { applications: Application[
                   </TableCell>
                   <TableCell className="hidden max-w-48 truncate lg:table-cell">
                     {app.location ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden max-w-48 truncate xl:table-cell">
+                    {(app.resumeId && resumeNames.get(app.resumeId)) ?? "—"}
                   </TableCell>
                   <TableCell>{app.dateApplied ? formatDate(app.dateApplied) : "—"}</TableCell>
                   <TableCell className="hidden sm:table-cell">

@@ -34,6 +34,7 @@ const input: ApplicationInput = {
   contactName: null,
   contactEmail: null,
   notes: null,
+  resumeId: null,
 };
 
 let storage: MemoryStorage;
@@ -125,5 +126,79 @@ describe("DemoRepository", () => {
 
     expect(storage.getItem(DEMO_STORAGE_KEY)).toBeNull();
     expect(await repo.listApplications()).toEqual(original);
+  });
+
+  it("drops demo data saved by an older version and re-seeds", async () => {
+    storage.setItem("jat-demo-v1", JSON.stringify({ applications: [], events: [] }));
+    expect(await makeRepo().listApplications()).toHaveLength(25);
+    expect(storage.getItem("jat-demo-v1")).toBeNull();
+  });
+});
+
+describe("DemoRepository resumes", () => {
+  const resumeInput = { name: "Backend – v1", linkUrl: null, notes: null };
+
+  it("seeds resumes that the sample applications link to", async () => {
+    const repo = makeRepo();
+    const resumes = await repo.listResumes();
+    expect(resumes.map((r) => r.name)).toEqual([
+      "Data & analytics – v1",
+      "Frontend focus – v3",
+      "General – v2",
+    ]);
+    const ids = new Set(resumes.map((r) => r.id));
+    const linked = (await repo.listApplications()).filter((a) => a.resumeId !== null);
+    expect(linked.length).toBeGreaterThan(0);
+    expect(linked.every((a) => ids.has(a.resumeId!))).toBe(true);
+  });
+
+  it("creates, renames and lists resumes", async () => {
+    const repo = makeRepo();
+    const created = await repo.createResume(resumeInput);
+    const renamed = await repo.updateResume(created.id, { ...resumeInput, name: "Backend – v2" });
+    expect(renamed.name).toBe("Backend – v2");
+    expect((await makeRepo().listResumes()).some((r) => r.id === created.id)).toBe(true);
+  });
+
+  it("rejects a duplicate name, like the database's unique constraint", async () => {
+    const repo = makeRepo();
+    const error = await repo
+      .createResume({ ...resumeInput, name: "General – v2" })
+      .catch((e: unknown) => e);
+    expect((error as RepositoryError).fieldErrors?.name).toEqual([
+      "You already have a resume with that name.",
+    ]);
+    // Saving a resume under its own name is fine.
+    const [first] = await repo.listResumes();
+    await expect(
+      repo.updateResume(first!.id, { ...first!, notes: "Edited" }),
+    ).resolves.toBeDefined();
+  });
+
+  it("only links applications to resumes that exist", async () => {
+    const repo = makeRepo();
+    const [resume] = await repo.listResumes();
+    const linked = await repo.createApplication({ ...input, resumeId: resume!.id });
+    expect(linked.resumeId).toBe(resume!.id);
+
+    const error = await repo
+      .createApplication({ ...input, resumeId: "00000000-0000-4000-8000-000000000000" })
+      .catch((e: unknown) => e);
+    expect((error as RepositoryError).fieldErrors?.resumeId).toBeDefined();
+  });
+
+  it("deleting a resume keeps its applications and clears their link", async () => {
+    const repo = makeRepo();
+    const [resume] = await repo.listResumes();
+    const before = await repo.listApplications();
+    const usedBy = before.filter((a) => a.resumeId === resume!.id).map((a) => a.id);
+    expect(usedBy.length).toBeGreaterThan(0);
+
+    await repo.deleteResume(resume!.id);
+
+    const after = await repo.listApplications();
+    expect(after).toHaveLength(before.length);
+    expect(after.filter((a) => usedBy.includes(a.id)).every((a) => a.resumeId === null)).toBe(true);
+    expect((await repo.listResumes()).some((r) => r.id === resume!.id)).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Application } from "@/lib/applications/types";
+import type { Resume } from "@/lib/resumes/types";
 import { useApplications } from "@/lib/repository/applications-provider";
 
 /** Placeholder rows shown while data loads. Announced politely to screen readers. */
@@ -57,18 +58,18 @@ export function EmptyState({
 }
 
 /**
- * Shows the loading or error state until the applications have loaded, then
- * renders its children with them. Saves every page repeating the same checks.
+ * Shows the loading or error state until the applications (and resumes) have
+ * loaded, then renders its children with them. Saves every page repeating the same checks.
  */
 export function WithApplications({
   children,
   loading,
 }: {
-  children: (applications: Application[]) => React.ReactNode;
+  children: (applications: Application[], resumes: Resume[]) => React.ReactNode;
   loading?: React.ReactNode;
 }) {
   const { state, reload } = useApplications();
   if (state.status === "loading") return loading ?? <LoadingState />;
   if (state.status === "error") return <ErrorState message={state.message} onRetry={reload} />;
-  return children(state.applications);
+  return children(state.applications, state.resumes);
 }

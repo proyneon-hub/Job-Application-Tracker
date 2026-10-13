@@ -6,7 +6,7 @@ import { applicationInputSchema } from "@/lib/validation/application";
 import { createDemoData } from "./seed";
 
 const TODAY = "2026-10-12";
-const { applications, events } = createDemoData(TODAY);
+const { applications, events, resumes } = createDemoData(TODAY);
 
 describe("createDemoData", () => {
   it("creates about 25 applications covering every status", () => {
@@ -50,6 +50,20 @@ describe("createDemoData", () => {
     for (const app of applications) {
       if (app.contactEmail) expect(app.contactEmail).toMatch(/@example\.test$/);
       if (app.postingUrl) expect(new URL(app.postingUrl).hostname).toMatch(/\.test$/);
+    }
+  });
+
+  it("links most sent applications to a seeded resume, and nothing else", () => {
+    const ids = new Set(resumes.map((r) => r.id));
+    const linked = applications.filter((a) => a.resumeId !== null);
+    expect(linked.every((a) => ids.has(a.resumeId!))).toBe(true);
+    expect(linked.length).toBeGreaterThan(applications.length / 2);
+    expect(applications.some((a) => a.status !== "wishlist" && a.resumeId === null)).toBe(true);
+    expect(applications.filter((a) => a.status === "wishlist").every((a) => !a.resumeId)).toBe(
+      true,
+    );
+    for (const resume of resumes) {
+      if (resume.linkUrl) expect(new URL(resume.linkUrl).hostname).toMatch(/\.test$/);
     }
   });
 

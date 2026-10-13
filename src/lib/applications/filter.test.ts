@@ -59,6 +59,16 @@ describe("filterApplications", () => {
     expect(result).toEqual([rockets]);
   });
 
+  it("filters by resume, including applications with none recorded", () => {
+    const resumeId = "de0c0000-0000-4000-8000-000000000001";
+    const apps = [{ ...rockets, resumeId }, paper, analytics];
+    const companies = (resume: string) =>
+      filterApplications(apps, { ...DEFAULT_FILTERS, resume }).map((a) => a.company);
+    expect(companies(resumeId)).toEqual(["Fictional Rockets Ltd"]);
+    expect(companies("none")).toEqual(["Sample Paper Co", "Placeholder Analytics"]);
+    expect(companies("all")).toHaveLength(3);
+  });
+
   it("does not modify the input array", () => {
     const input = [...all];
     filterApplications(input, { ...DEFAULT_FILTERS, sort: "oldest" });
@@ -70,5 +80,6 @@ describe("hasActiveFilters", () => {
   it("ignores sort order and blank search text", () => {
     expect(hasActiveFilters({ ...DEFAULT_FILTERS, sort: "oldest", query: "  " })).toBe(false);
     expect(hasActiveFilters({ ...DEFAULT_FILTERS, status: "offer" })).toBe(true);
+    expect(hasActiveFilters({ ...DEFAULT_FILTERS, resume: "none" })).toBe(true);
   });
 });
