@@ -15,6 +15,7 @@ import {
   WORK_MODES,
 } from "@/lib/applications/constants";
 import type { Application, ApplicationInput } from "@/lib/applications/types";
+import type { Resume } from "@/lib/resumes/types";
 import { toFieldErrors } from "@/lib/actions/form-state";
 import { RepositoryError } from "@/lib/repository/types";
 import { applicationFormSchema } from "@/lib/validation/application";
@@ -24,6 +25,8 @@ type FieldErrors = Record<string, string[] | undefined>;
 type ApplicationFormProps = {
   /** The application being edited, or undefined when creating a new one. */
   initial?: Application;
+  /** The user's resume versions, for the "Resume used" picker. */
+  resumes?: Resume[];
   submitLabel: string;
   cancelHref: string;
   onSubmit: (input: ApplicationInput) => Promise<unknown>;
@@ -36,6 +39,7 @@ type ApplicationFormProps = {
  */
 export function ApplicationForm({
   initial,
+  resumes = [],
   submitLabel,
   cancelHref,
   onSubmit,
@@ -155,6 +159,35 @@ export function ApplicationForm({
           defaultValue={initial?.nextFollowUp ?? ""}
           errors={errorsFor("nextFollowUp")}
         />
+      </fieldset>
+
+      <fieldset className="grid gap-4 sm:grid-cols-2">
+        <legend className="mb-4 text-base font-semibold">Resume</legend>
+        <div className="grid content-start gap-2">
+          <FieldShell
+            id="resumeId"
+            label="Resume used"
+            hint={resumes.length === 0 ? "You haven't added any resume versions yet." : undefined}
+            errors={errorsFor("resumeId")}
+          >
+            {(props) => (
+              <NativeSelect name="resumeId" defaultValue={initial?.resumeId ?? ""} {...props}>
+                <option value="">None recorded</option>
+                {resumes.map((resume) => (
+                  <option key={resume.id} value={resume.id}>
+                    {resume.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
+          </FieldShell>
+          <Link
+            href="/resumes"
+            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {resumes.length === 0 ? "Add a resume version" : "Manage resumes"}
+          </Link>
+        </div>
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-3">

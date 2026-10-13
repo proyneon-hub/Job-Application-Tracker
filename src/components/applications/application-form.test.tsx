@@ -7,9 +7,21 @@ import { RepositoryError } from "@/lib/repository/types";
 
 import { ApplicationForm } from "./application-form";
 
+const resumes = [
+  {
+    id: "de0c0000-0000-4000-8000-000000000001",
+    name: "Frontend focus – v3",
+    linkUrl: null,
+    notes: null,
+    createdAt: "2026-10-01T09:00:00.000Z",
+    updatedAt: "2026-10-01T09:00:00.000Z",
+  },
+];
+
 function setup(onSubmit = vi.fn().mockResolvedValue(undefined)) {
   render(
     <ApplicationForm
+      resumes={resumes}
       submitLabel="Add application"
       cancelHref="/applications"
       onSubmit={onSubmit}
@@ -51,7 +63,19 @@ describe("ApplicationForm", () => {
       salaryMax: null,
       salaryCurrency: "USD",
       notes: null,
+      resumeId: null,
     });
+  });
+
+  it("records which resume was used", async () => {
+    const { onSubmit, user } = setup();
+
+    await user.type(screen.getByLabelText("Company"), "Sample Paper Co");
+    await user.type(screen.getByLabelText("Role title"), "Frontend Engineer");
+    await user.selectOptions(screen.getByLabelText("Resume used"), "Frontend focus – v3");
+    await user.click(screen.getByRole("button", { name: "Add application" }));
+
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ resumeId: resumes[0]!.id });
   });
 
   it("shows errors returned by the server on the matching fields", async () => {

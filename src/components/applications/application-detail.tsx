@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { WORK_MODE_LABELS } from "@/lib/applications/constants";
 import type { Application } from "@/lib/applications/types";
+import type { Resume } from "@/lib/resumes/types";
 import { formatDate, formatDateTime, formatSalaryRange } from "@/lib/format";
 
 import { DeleteApplicationButton } from "./delete-application-button";
@@ -17,9 +18,11 @@ import { StatusTimeline } from "./status-timeline";
 export function ApplicationDetail({ id }: { id: string }) {
   return (
     <WithApplications>
-      {(applications) => {
+      {(applications, resumes) => {
         const application = applications.find((a) => a.id === id);
-        return application ? <Details application={application} /> : <NotFound />;
+        if (!application) return <NotFound />;
+        const resume = resumes.find((r) => r.id === application.resumeId);
+        return <Details application={application} resume={resume} />;
       }}
     </WithApplications>
   );
@@ -39,7 +42,7 @@ export function NotFound() {
   );
 }
 
-function Details({ application: app }: { application: Application }) {
+function Details({ application: app, resume }: { application: Application; resume?: Resume }) {
   const salary = formatSalaryRange(app.salaryMin, app.salaryMax, app.salaryCurrency);
 
   const fields: { label: string; value: React.ReactNode }[] = [
@@ -49,6 +52,25 @@ function Details({ application: app }: { application: Application }) {
     { label: "Source", value: app.source },
     { label: "Date applied", value: app.dateApplied ? formatDate(app.dateApplied) : null },
     { label: "Next follow-up", value: app.nextFollowUp ? formatDate(app.nextFollowUp) : null },
+    {
+      label: "Resume",
+      value: resume ? (
+        resume.linkUrl ? (
+          <a
+            href={resume.linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 underline underline-offset-4"
+          >
+            {resume.name}
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
+        ) : (
+          resume.name
+        )
+      ) : null,
+    },
     { label: "Contact", value: app.contactName },
     {
       label: "Contact email",

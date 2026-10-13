@@ -1,5 +1,6 @@
 import { STATUS_LABELS, WORK_MODE_LABELS } from "@/lib/applications/constants";
 import type { Application } from "@/lib/applications/types";
+import type { Resume } from "@/lib/resumes/types";
 
 /**
  * Makes one CSV cell safe:
@@ -21,7 +22,9 @@ export function toCsv(rows: (string | number | null)[][]) {
   return rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
 }
 
-const COLUMNS: [string, (app: Application) => string | number | null][] = [
+type Column = [string, (app: Application, resumeName: string | null) => string | number | null];
+
+const COLUMNS: Column[] = [
   ["Company", (a) => a.company],
   ["Role title", (a) => a.roleTitle],
   ["Status", (a) => STATUS_LABELS[a.status]],
@@ -33,6 +36,7 @@ const COLUMNS: [string, (app: Application) => string | number | null][] = [
   ["Salary max", (a) => a.salaryMax],
   ["Currency", (a) => a.salaryCurrency],
   ["Source", (a) => a.source],
+  ["Resume", (_a, resumeName) => resumeName],
   ["Posting URL", (a) => a.postingUrl],
   ["Contact name", (a) => a.contactName],
   ["Contact email", (a) => a.contactEmail],
@@ -41,10 +45,17 @@ const COLUMNS: [string, (app: Application) => string | number | null][] = [
   ["Updated at", (a) => a.updatedAt],
 ];
 
-/** All of the user's applications as CSV text, one row each, with a header row. */
-export function applicationsToCsv(applications: Application[]) {
+/**
+ * All of the user's applications as CSV text, one row each, with a header row.
+ * Resumes are listed by name, which is what a spreadsheet reader needs.
+ */
+export function applicationsToCsv(applications: Application[], resumes: Resume[] = []) {
+  const resumeNames = new Map(resumes.map((r) => [r.id, r.name]));
   return toCsv([
     COLUMNS.map(([header]) => header),
-    ...applications.map((app) => COLUMNS.map(([, get]) => get(app))),
+    ...applications.map((app) => {
+      const resumeName = app.resumeId ? (resumeNames.get(app.resumeId) ?? null) : null;
+      return COLUMNS.map(([, get]) => get(app, resumeName));
+    }),
   ]);
 }

@@ -14,12 +14,13 @@ export function EditApplication({ id }: { id: string }) {
 
   return (
     <WithApplications>
-      {(applications) => {
+      {(applications, resumes) => {
         const application = applications.find((a) => a.id === id);
         if (!application) return <NotFound />;
         return (
           <ApplicationForm
             initial={application}
+            resumes={resumes}
             submitLabel="Save changes"
             cancelHref={`/applications/${id}`}
             onSubmit={async (input) => {
