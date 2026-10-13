@@ -37,6 +37,10 @@ test.describe("README screenshots", () => {
     await expect(page.getByText(/Showing \d+ of \d+/)).toBeVisible();
     await shot(page, "applications");
 
+    await page.goto("/resumes");
+    await expect(page.getByRole("list", { name: "Your resumes" })).toBeVisible();
+    await shot(page, "resumes");
+
     await page.goto("/board");
     await cardsIn(page, "interview").first().getByRole("link").click();
     await expect(page.getByRole("list", { name: "Status changes, oldest first" })).toBeVisible();

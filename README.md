@@ -3,7 +3,7 @@
 [![CI](https://github.com/proyneon-hub/Job-Application-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/proyneon-hub/Job-Application-Tracker/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Track every job application from wishlist to offer: a kanban board, follow-up reminders, and response-rate stats, with each user's data kept private by row-level security in the database.
+Track every job application from wishlist to offer: a kanban board, follow-up reminders, the resume version you sent, and response-rate stats, with each user's data kept private by row-level security in the database.
 
 **Live demo:** [job-application-tracker-two-beryl.vercel.app](https://job-application-tracker-two-beryl.vercel.app/) · Click **Try the demo** on the landing page to explore with made-up sample data. No account needed.
 
@@ -14,24 +14,25 @@ Job hunting means dozens of applications at different stages, recruiters to chas
 - **Applications:** company, role, posting link, location, work mode, salary range, source, status, dates, contact and notes. Create, edit and delete.
 - **Kanban board:** one column per status. Drag cards with a mouse, touch, or **just the keyboard**; every card also has a "Move to…" menu.
 - **Status history:** every status change is recorded automatically and shown as a timeline.
-- **Table view:** search, filter by status and work mode, and sort by date applied.
+- **Resume versions:** keep a list of the resumes you send out, each with a link to wherever the file lives, and record which one went with each application.
+- **Table view:** search, filter by status, work mode and resume, and sort by date applied.
 - **Follow-ups:** the dashboard lists what's due today and what's overdue.
-- **Stats:** total applications, response rate, average days to first response, applications per week, and a stage-by-stage funnel.
+- **Stats:** total applications, response rate, average days to first response, applications per week, a stage-by-stage funnel, and the response rate of each resume version.
 - **CSV export**, **dark mode**, and a **demo mode** that runs entirely in your browser.
 
 ## Screenshots
 
 All screenshots use the fictional demo data. Regenerate them with `npm run screenshots`.
 
-| Dashboard                                                                           | Board                                                                                      |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| ![Dashboard with follow-ups, stat tiles and charts](docs/screenshots/dashboard.png) | ![Kanban board with a column per status](docs/screenshots/board.png)                       |
-| **Applications table**                                                              | **Application detail with status history**                                                 |
-| ![Applications table with search and filters](docs/screenshots/applications.png)    | ![Application detail page with a status timeline](docs/screenshots/application-detail.png) |
-| **Dark mode**                                                                       | **Landing page**                                                                           |
-| ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png)                      | ![Landing page with feature overview](docs/screenshots/landing.png)                        |
-
-<p align="center"><img src="docs/screenshots/board-phone.png" alt="The board on a phone, scrolling sideways between columns" width="260"></p>
+| Dashboard                                                                                               | Board                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ![Dashboard with follow-ups, stat tiles and charts](docs/screenshots/dashboard.png)                     | ![Kanban board with a column per status](docs/screenshots/board.png)                                                    |
+| **Applications table**                                                                                  | **Application detail with status history**                                                                              |
+| ![Applications table with search and filters](docs/screenshots/applications.png)                        | ![Application detail page with a status timeline](docs/screenshots/application-detail.png)                              |
+| **Resume versions**                                                                                     | **Dark mode**                                                                                                           |
+| ![Resumes page listing three resume versions and how often each was used](docs/screenshots/resumes.png) | ![Dashboard in dark mode](docs/screenshots/dashboard-dark.png)                                                          |
+| **Landing page**                                                                                        | **On a phone**                                                                                                          |
+| ![Landing page with feature overview](docs/screenshots/landing.png)                                     | <img src="docs/screenshots/board-phone.png" alt="The board on a phone, scrolling sideways between columns" width="260"> |
 
 ## Tech stack
 
@@ -87,15 +88,16 @@ flowchart LR
   - **Sent:** has a date applied, or reached Applied or later.
   - **Response:** the first move to Screening, Interview, Offer or Rejected.
   - **Funnel:** counts the furthest stage each application reached.
+  - **Response rate by resume:** the same "sent" and "response" rules, grouped by the resume each application used.
 
 ```
 src/
   app/            routes: (auth) pages, (app) logged-in pages, auth/confirm, demo routes
-  components/     ui/ (shadcn), applications/, board/, dashboard/, layout/, forms/
-  lib/            repository/, actions/, validation/, stats/, board/, demo/, supabase/, auth/, theme/
+  components/     ui/ (shadcn), applications/, board/, dashboard/, resumes/, layout/, forms/
+  lib/            repository/, actions/, validation/, stats/, resumes/, board/, demo/, supabase/, auth/, theme/
   proxy.ts        session refresh + route guard
 supabase/         migrations/, tests/ (pgTAP), config.toml, email templates
-e2e/              Playwright tests (board, dashboard, demo, a11y, responsive, polish)
+e2e/              Playwright tests (board, dashboard, resumes, demo, a11y, responsive, polish)
 ```
 
 ## Privacy and security
@@ -109,12 +111,22 @@ create policy "Users can read their own applications"
   using ((select auth.uid()) = user_id);
 ```
 
-There are matching policies for insert, update and delete. `status_events` is **read-only** for users: only the trigger can write it, so history can't be forged. Logged-out visitors (the `anon` role) have no table access at all.
+There are matching policies for insert, update and delete on `applications` and `resumes`. `status_events` is **read-only** for users: only the trigger can write it, so history can't be forged. Logged-out visitors (the `anon` role) have no table access at all.
 
-**How it's proven.** `supabase/tests/rls.test.sql` is a pgTAP test that runs in CI against a real Supabase stack. It creates two users and checks 17 things, including that user B:
+**Foreign keys need care too.** Postgres checks a foreign key without applying RLS, so a plain `references resumes (id)` would let someone link another user's resume to their own application if they knew its id. The link is a composite key instead, so the resume must belong to the same user:
 
-- can't read, update or delete user A's applications or history;
+```sql
+foreign key (resume_id, user_id) references public.resumes (id, user_id)
+  on delete set null (resume_id)
+```
+
+Deleting a resume clears the link and keeps the applications. The app stores only a resume's name, notes and link, never the file.
+
+**How it's proven.** `supabase/tests/rls.test.sql` is a pgTAP test that runs in CI against a real Supabase stack. It creates two users and checks 27 things, including that user B:
+
+- can't read, update or delete user A's applications, resumes or history;
 - can't create rows owned by A;
+- can't link A's resume to their own application;
 - can't write history directly;
 
 and that anonymous visitors can't read anything. With RLS turned off, 8 of those checks fail, so the test really guards it.
@@ -195,6 +207,7 @@ Then run `npm run dev` and open http://localhost:3000. You can also click **Try 
 - **Database tests (pgTAP)** prove row-level security on a real Supabase stack in CI.
 - **Tests of the tests.** Before trusting a test, I broke the code it protects and checked that it failed:
   - with RLS disabled, the database test fails;
+  - with the resume link as a plain foreign key, the cross-user link check fails;
   - with the keyboard drag helper broken, the board test fails;
   - injecting low-contrast text and an image without alt text makes the axe scan fail.
 
@@ -211,7 +224,7 @@ Then run `npm run dev` and open http://localhost:3000. You can also click **Try 
 ## Future ideas
 
 - **Email reminders** for follow-ups, which needs custom SMTP and a scheduled job.
-- **File uploads** to keep CV and cover-letter versions with each application.
+- **File uploads:** store the resume and cover-letter files themselves, not just a link (needs Supabase Storage with its own access policies).
 - **AI features:** summarise a job posting, or draft follow-up emails.
 - **Browser extension** to save a job straight from a job board.
 - **Team or coach accounts** for sharing progress with a mentor.
