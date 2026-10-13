@@ -19,6 +19,15 @@ describe("applicationFormSchema", () => {
     });
   });
 
+  it("treats an empty resume choice as none, and rejects a malformed id", () => {
+    expect(applicationFormSchema.parse({ ...minimalForm, resumeId: "" }).resumeId).toBeNull();
+    const id = "de0c0000-0000-4000-8000-000000000001";
+    expect(applicationFormSchema.parse({ ...minimalForm, resumeId: id }).resumeId).toBe(id);
+    expect(applicationFormSchema.safeParse({ ...minimalForm, resumeId: "abc" }).success).toBe(
+      false,
+    );
+  });
+
   it("parses salaries written with commas and spaces", () => {
     const result = applicationFormSchema.parse({
       ...minimalForm,

@@ -4,6 +4,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useState } from "r
 
 import type { ApplicationStatus } from "@/lib/applications/constants";
 import type { Application, ApplicationInput } from "@/lib/applications/types";
+import type { Resume, ResumeInput } from "@/lib/resumes/types";
 
 import { isDemoModeInBrowser } from "@/lib/demo/mode";
 
@@ -14,7 +15,7 @@ import { RepositoryError, type ApplicationsRepository } from "./types";
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; applications: Application[] };
+  | { status: "ready"; applications: Application[]; resumes: Resume[] };
 
 type ApplicationsContextValue = {
   state: LoadState;
@@ -24,6 +25,9 @@ type ApplicationsContextValue = {
   updateApplication: (id: string, input: ApplicationInput) => Promise<Application>;
   updateStatus: (id: string, status: ApplicationStatus) => Promise<Application>;
   deleteApplication: (id: string) => Promise<void>;
+  createResume: (input: ResumeInput) => Promise<Resume>;
+  updateResume: (id: string, input: ResumeInput) => Promise<Resume>;
+  deleteResume: (id: string) => Promise<void>;
   /** Only in demo mode: go back to the original sample data. */
   resetDemo?: () => void;
 };
@@ -31,8 +35,8 @@ type ApplicationsContextValue = {
 const ApplicationsContext = createContext<ApplicationsContextValue | null>(null);
 
 /**
- * Loads the user's applications once and shares them with every page in the app,
- * keeping the list up to date as they're created, edited and deleted.
+ * Loads the user's applications and resumes once and shares them with every page
+ * in the app, keeping the lists up to date as they're created, edited and deleted.
  *
  * Which repository it uses is decided here, so pages don't need to know whether
  * they're showing real data or demo data.
@@ -53,10 +57,9 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     let cancelled = false;
-    repository
-      .listApplications()
-      .then((applications) => {
-        if (!cancelled) setState({ status: "ready", applications });
+    Promise.all([repository.listApplications(), repository.listResumes()])
+      .then(([applications, resumes]) => {
+        if (!cancelled) setState({ status: "ready", applications, resumes });
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -76,14 +79,29 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
     setLoadCount((count) => count + 1);
   }, []);
 
-  /** Applies a change to the loaded list (no-op while loading or after an error). */
-  const updateList = useCallback((change: (applications: Application[]) => Application[]) => {
-    setState((current) =>
-      current.status === "ready"
-        ? { status: "ready", applications: change(current.applications) }
-        : current,
-    );
-  }, []);
+  /** Applies a change to the loaded data (no-op while loading or after an error). */
+  const updateReady = useCallback(
+    (change: (ready: Extract<LoadState, { status: "ready" }>) => Partial<typeof ready>) => {
+      setState((current) =>
+        current.status === "ready" ? { ...current, ...change(current) } : current,
+      );
+    },
+    [],
+  );
+
+  const updateList = useCallback(
+    (change: (applications: Application[]) => Application[]) =>
+      updateReady((ready) => ({ applications: change(ready.applications) })),
+    [updateReady],
+  );
+
+  const updateResumes = useCallback(
+    (change: (resumes: Resume[]) => Resume[]) =>
+      updateReady((ready) => ({
+        resumes: change(ready.resumes).toSorted((a, b) => a.name.localeCompare(b.name)),
+      })),
+    [updateReady],
+  );
 
   const replaceInList = useCallback(
     (saved: Application) => updateList((apps) => apps.map((a) => (a.id === saved.id ? saved : a))),
@@ -135,8 +153,24 @@ export function ApplicationsProvider({ children }: { children: React.ReactNode }
         await repository.deleteApplication(id);
         updateList((apps) => apps.filter((a) => a.id !== id));
       },
+      async createResume(input) {
+        const created = await repository.createResume(input);
+        updateResumes((resumes) => [...resumes, created]);
+        return created;
+      },
+      async updateResume(id, input) {
+        const saved = await repository.updateResume(id, input);
+        updateResumes((resumes) => resumes.map((r) => (r.id === id ? saved : r)));
+        return saved;
+      },
+      async deleteResume(id) {
+        await repository.deleteResume(id);
+        updateResumes((resumes) => resumes.filter((r) => r.id !== id));
+        // The database clears the link on applications that used it; do the same here.
+        updateList((apps) => apps.map((a) => (a.resumeId === id ? { ...a, resumeId: null } : a)));
+      },
     }),
-    [state, repository, demoRepository, reload, updateList, replaceInList],
+    [state, repository, demoRepository, reload, updateList, updateResumes, replaceInList],
   );
 
   return <ApplicationsContext value={value}>{children}</ApplicationsContext>;

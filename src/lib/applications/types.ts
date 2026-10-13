@@ -22,6 +22,8 @@ export type Application = {
   contactName: string | null;
   contactEmail: string | null;
   notes: string | null;
+  /** The resume version sent with this application, if recorded. */
+  resumeId: string | null;
   createdAt: string;
   updatedAt: string;
 };
